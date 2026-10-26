@@ -1,0 +1,7 @@
+{
+    "cmake.sourceDirectory": "/Users/lch/Desktop/improve/cpp/learning/day01",
+    "C_Cpp.default.compilerPath": "/usr/bin/clang++",
+    "C_Cpp.default.cppStandard": "c++17",
+    "debug.saveBeforeStart": "allEditorsInActiveGroup",
+    "task.saveBeforeRun": "always"
+}
