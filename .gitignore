@@ -1,0 +1,36 @@
+# macOS metadata
+.DS_Store
+._*
+
+# CMake / Qt build directories
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Compiled objects and debug symbols
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.dSYM/
+*.app/
+a.out
+
+# Qt Creator local settings
+.qtcreator/
+*.user
+*.user.*
+
+# Standalone exercise executables
+/day01/hello
+/day02/day02
+/day03/example1
+/day03/example2
+/day03/main
+/day03/smart_pointer

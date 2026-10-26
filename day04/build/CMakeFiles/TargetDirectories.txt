@@ -1,3 +1,0 @@
-/Users/lch/Desktop/improve/cpp/learning/day04/build/CMakeFiles/device_data.dir
-/Users/lch/Desktop/improve/cpp/learning/day04/build/CMakeFiles/edit_cache.dir
-/Users/lch/Desktop/improve/cpp/learning/day04/build/CMakeFiles/rebuild_cache.dir

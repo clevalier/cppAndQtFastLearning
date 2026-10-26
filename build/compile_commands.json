@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/Users/lch/Desktop/improve/cpp/learning/build",
-  "command": "/usr/bin/clang++   -g -std=gnu++17 -arch arm64 -o CMakeFiles/hello.dir/main.cpp.o -c /Users/lch/Desktop/improve/cpp/learning/day01/main.cpp",
-  "file": "/Users/lch/Desktop/improve/cpp/learning/day01/main.cpp",
-  "output": "CMakeFiles/hello.dir/main.cpp.o"
-}
-]

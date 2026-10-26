@@ -1,1 +1,0 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/device_data.dir/main.cpp.o CMakeFiles/device_data.dir/Analyzer.cpp.o -o device_data
