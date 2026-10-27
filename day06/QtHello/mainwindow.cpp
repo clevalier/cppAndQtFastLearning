@@ -33,8 +33,47 @@ MainWindow::MainWindow(QWidget *parent)
     }
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
+    updateTemperatureById("T004", 45.8);
+
     statusBar()->showMessage("系统就绪");
 }
+
+
+void MainWindow::updateTemperatureById(
+    const QString& deviceId,
+    double temperature)
+{
+    auto* table = ui->tableWidget;
+
+    // 遍历表格每一行
+    for (int row = 0; row < table->rowCount(); ++row)
+    {
+        // 获取当前行的设备编号
+        auto* idItem = table->item(row, 0);
+
+        if (idItem == nullptr)
+        {
+            continue;
+        }
+
+        // 判断是不是要更新的设备
+        if (idItem->text() == deviceId)
+        {
+            // 获取温度单元格
+            auto* tempItem = table->item(row, 1);
+
+            if (tempItem != nullptr)
+            {
+                tempItem->setText(
+                    QString::number(temperature, 'f', 1)
+                    );
+            }
+
+            return;
+        }
+    }
+}
+
 
 MainWindow::~MainWindow()
 {

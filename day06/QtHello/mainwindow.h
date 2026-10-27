@@ -19,5 +19,9 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    void updateTemperatureById(
+        const QString& deviceId,
+        double temperature
+        );
 };
 #endif // MAINWINDOW_H
