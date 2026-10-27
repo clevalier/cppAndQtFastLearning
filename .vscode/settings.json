@@ -1,7 +1,34 @@
 {
-    "cmake.sourceDirectory": "/Users/lch/Desktop/improve/cpp/learning/day01",
+    "cmake.sourceDirectory": [
+        "${workspaceFolder}/day01",
+        "${workspaceFolder}/day01/multifile",
+        "${workspaceFolder}/day01/qt-hello/QtHello",
+        "${workspaceFolder}/day04",
+        "${workspaceFolder}/day06/QtHello"
+    ],
     "C_Cpp.default.compilerPath": "/usr/bin/clang++",
     "C_Cpp.default.cppStandard": "c++17",
     "debug.saveBeforeStart": "allEditorsInActiveGroup",
-    "task.saveBeforeRun": "always"
+    "task.saveBeforeRun": "always",
+    "C_Cpp.default.compileCommands": [
+        "${workspaceFolder}/day01/build/vscode/compile_commands.json",
+        "${workspaceFolder}/day01/multifile/build/vscode/compile_commands.json",
+        "${workspaceFolder}/day01/qt-hello/QtHello/build/vscode/compile_commands.json",
+        "${workspaceFolder}/day04/build/vscode/compile_commands.json",
+        "${workspaceFolder}/day06/QtHello/build/vscode/compile_commands.json"
+    ],
+    "cmake.buildDirectory": "${sourceDirectory}/build/vscode",
+    "cmake.configureOnOpen": true,
+    "cmake.configureSettings": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "CMAKE_PREFIX_PATH": "${userHome}/Qt/6.12.0/macos"
+    },
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/**",
+        "${userHome}/Qt/6.12.0/macos/include/**"
+    ],
+    "C_Cpp.default.macFrameworkPath": [
+        "${userHome}/Qt/6.12.0/macos/lib",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
+    ]
 }

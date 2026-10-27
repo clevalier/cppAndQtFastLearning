@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.19)
 project(QtHello LANGUAGES CXX)
 
+# Export the actual include paths and compiler flags for VS Code IntelliSense.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
 
 qt_standard_project_setup()
