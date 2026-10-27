@@ -11,7 +11,6 @@ int main(int argc, char *argv[])
 
     w.setWindowTitle("工业设备监控 - Day 05");//修改窗口标题
     w.resize(520, 320); //设置窗口初始宽高。
-    w.show();
 
     //3.显示主窗口
     w.show();

@@ -1,10 +1,11 @@
-
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "DeviceReading.h"
 
-#include <QLabel>
-#include <QVBoxLayout>
+#include <QHeaderView>
 #include <QStatusBar>
+#include <QTableWidgetItem>
+#include <array>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -12,25 +13,27 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    // 获取主窗口中央区域
-    QWidget *center = centralWidget();
+    // 用结构体保存练习数据，再逐行填入 Designer 创建的表格。
+    const std::array<DeviceReading, 4> readings{{
+        {"T001", 26.5, true},
+        {"T002", 31.2, true},
+        {"T003", 28.0, false},
+        {"T004", 35.8, true}
+    }};
 
-    // 为中央区域创建垂直布局
-    auto *layout = new QVBoxLayout(center);
+    auto *table = ui->tableWidget;
+    table->setRowCount(static_cast<int>(readings.size()));
+    table->setColumnCount(3);
+    table->setHorizontalHeaderLabels({"设备编号", "温度", "状态"});
+    for (int row = 0; row < table->rowCount(); ++row) {
+        const auto &reading = readings[row];
+        table->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(reading.deviceId)));
+        table->setItem(row, 1, new QTableWidgetItem(QString::number(reading.temperature, 'f', 1)));
+        table->setItem(row, 2, new QTableWidgetItem(reading.online ? "在线" : "离线"));
+    }
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
-    // 创建状态标签
-    auto *label = new QLabel("设备状态：待机", center);
-
-    // 设置文本居中
-    label->setAlignment(Qt::AlignCenter);
-
-    // 将标签添加到布局中
-    layout->addWidget(label);
-
-    // 设置底部状态栏
-    statusBar()->showMessage(
-        "系统就绪"
-        );
+    statusBar()->showMessage("系统就绪");
 }
 
 MainWindow::~MainWindow()

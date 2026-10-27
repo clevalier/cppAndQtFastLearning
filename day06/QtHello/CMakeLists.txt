@@ -10,6 +10,7 @@ qt_add_executable(QtHello
     main.cpp
     mainwindow.cpp
     mainwindow.h
+    DeviceReading.h
     mainwindow.ui
 )
 
