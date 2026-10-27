@@ -24,11 +24,15 @@
         "CMAKE_PREFIX_PATH": "${userHome}/Qt/6.12.0/macos"
     },
     "C_Cpp.default.includePath": [
+        "${userHome}/Qt/6.12.0/macos/lib/QtCore.framework/Headers",
+        "${userHome}/Qt/6.12.0/macos/lib/QtGui.framework/Headers",
+        "${userHome}/Qt/6.12.0/macos/lib/QtWidgets.framework/Headers",
         "${workspaceFolder}/**",
-        "${userHome}/Qt/6.12.0/macos/include/**"
+        "${userHome}/Qt/6.12.0/macos/include"
     ],
     "C_Cpp.default.macFrameworkPath": [
         "${userHome}/Qt/6.12.0/macos/lib",
         "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
-    ]
+    ],
+    "C_Cpp.errorSquiggles": "enabled"
 }

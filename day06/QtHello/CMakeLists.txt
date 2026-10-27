@@ -23,6 +23,16 @@ target_link_libraries(QtHello
         Qt::Widgets
 )
 
+# On macOS, prefer real framework headers over Qt's include_next forwarding
+# headers so both Clang and VS Code IntelliSense resolve the same declarations.
+if(APPLE)
+    target_include_directories(QtHello BEFORE PRIVATE
+        "$<TARGET_FILE_DIR:Qt6::Core>/Headers"
+        "$<TARGET_FILE_DIR:Qt6::Gui>/Headers"
+        "$<TARGET_FILE_DIR:Qt6::Widgets>/Headers"
+    )
+endif()
+
 install(TARGETS QtHello
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
