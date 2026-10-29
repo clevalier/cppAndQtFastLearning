@@ -17,11 +17,17 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+
+private slots:
+    void startCollection();
+    void stopCollection();
+
 private:
     Ui::MainWindow *ui;
     void updateTemperatureById(
         const QString& deviceId,
         double temperature
         );
+    void setCollecting(bool collecting);
 };
 #endif // MAINWINDOW_H

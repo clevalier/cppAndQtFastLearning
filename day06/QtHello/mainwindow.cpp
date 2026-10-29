@@ -6,12 +6,46 @@
 #include <QStatusBar>
 #include <QTableWidgetItem>
 #include <array>
+#include <QPushButton>
+#include <QStatusBar>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    // 初始化按钮状态
+    // ui->startButton->setEnabled(true);
+    // ui->stopButton->setEnabled(false);
+    setCollecting(false);
+
+    //开始采集
+    connect(
+        ui->startButton,//信号发送者。
+        &QPushButton::clicked,//要监听的信号 QPushButton代表类名，::代表作用域解析运算符 QPushButton代表定义的信号 &取得成员函数指针
+        this,//接收上下文对象
+        // [this]() {//信号触发时执行的函数
+        //     ui->statusLabel->setText("设备状态：采集中");
+        //     statusBar()->showMessage("正在模拟采集");
+        //     ui->startButton->setEnabled(false);
+        //     ui->stopButton->setEnabled(true);
+        // }
+        &MainWindow::startCollection
+    );
+    //停止采集
+    connect(
+        ui->stopButton,//信号发送者。
+        &QPushButton::clicked,//要监听的信号 QPushButton代表类名，::代表作用域解析运算符 QPushButton代表定义的信号 &取得成员函数指针
+        this,//接收上下文对象
+        // [this]() {//信号触发时执行的函数
+        //     ui->statusLabel->setText("设备状态：待机");
+        //     statusBar()->showMessage("采集已停止 / 系统待机");
+        //     ui->stopButton->setEnabled(false);
+        //     ui->startButton->setEnabled(true);
+        // }
+        &MainWindow::stopCollection
+    );
 
     // 用结构体保存练习数据，再逐行填入 Designer 创建的表格。
     const std::array<DeviceReading, 4> readings{{
@@ -72,6 +106,35 @@ void MainWindow::updateTemperatureById(
             return;
         }
     }
+}
+
+void MainWindow::startCollection()
+{
+    setCollecting(true);
+}
+
+void MainWindow::stopCollection()
+{
+    setCollecting(false);
+}
+
+
+void MainWindow::setCollecting(bool collecting)
+{
+    ui->statusLabel->setText(
+        collecting
+            ? "设备状态：采集中"
+            : "设备状态：待机"
+        );
+
+    statusBar()->showMessage(
+        collecting
+            ? "正在模拟采集"
+            : "采集已停止 / 系统待机"
+        );
+
+    ui->startButton->setEnabled(!collecting);
+    ui->stopButton->setEnabled(collecting);
 }
 
 
