@@ -15,6 +15,7 @@ qt_add_executable(QtHello
     mainwindow.h
     DeviceReading.h
     mainwindow.ui
+
 )
 
 target_link_libraries(QtHello

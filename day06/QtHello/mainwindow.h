@@ -3,7 +3,9 @@
 
 #include <QMainWindow>
 
+
 QT_BEGIN_NAMESPACE
+class QTimer;
 namespace Ui {
 class MainWindow;
 }
@@ -21,6 +23,15 @@ public:
 private slots:
     void startCollection();
     void stopCollection();
+    void onSamplingTimeout();
+
+private:
+    QTimer* samplingTimer_ = nullptr;
+    double t004Temperature_ = 45.8;
+
+private:
+    void saveSampleToJson();
+    void loadSampleFromJson();
 
 private:
     Ui::MainWindow *ui;
