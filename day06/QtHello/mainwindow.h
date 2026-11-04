@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QString>
 
 
 QT_BEGIN_NAMESPACE
@@ -22,12 +23,14 @@ public:
 
 private slots:
     void startCollection();
+
     void stopCollection();
     void onSamplingTimeout();
 
 private:
     QTimer* samplingTimer_ = nullptr;
     double t004Temperature_ = 45.8;
+    void appendLog(const QString& message);
 
 private:
     void saveSampleToJson();

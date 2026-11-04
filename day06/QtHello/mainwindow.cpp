@@ -16,12 +16,16 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QDateTime>
+#include <QPlainTextEdit>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    ui->logEdit->setReadOnly(true);
+    ui->logEdit->setMaximumBlockCount(300);
 
     samplingTimer_ = new QTimer(this);
 
@@ -65,22 +69,25 @@ MainWindow::MainWindow(QWidget *parent)
     );
 
     // 用结构体保存练习数据，再逐行填入 Designer 创建的表格。
+
     const std::array<DeviceReading, 4> readings{{
-        {"T001", 26.5, true},
-        {"T002", 31.2, true},
-        {"T003", 28.0, false},
-        {"T004", 35.8, true}
+        {"T001", 26.5, true,  0.60},
+        {"T002", 31.2, true,  0.72},
+        {"T003", 28.0, false, 0.00},
+        {"T004", 35.8, true,  0.85}
     }};
+
 
     auto *table = ui->tableWidget;
     table->setRowCount(static_cast<int>(readings.size()));
-    table->setColumnCount(3);
-    table->setHorizontalHeaderLabels({"设备编号", "温度", "状态"});
+    table->setColumnCount(4);
+    table->setHorizontalHeaderLabels({"设备编号", "温度", "压力","状态"});
     for (int row = 0; row < table->rowCount(); ++row) {
         const auto &reading = readings[row];
         table->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(reading.deviceId)));
         table->setItem(row, 1, new QTableWidgetItem(QString::number(reading.temperature, 'f', 1)));
-        table->setItem(row, 2, new QTableWidgetItem(reading.online ? "在线" : "离线"));
+        table->setItem(row, 2, new QTableWidgetItem(reading.online? QString::number(reading.pressureMPa, 'f', 2): "—"));
+        table->setItem(row, 3, new QTableWidgetItem(reading.online ? "在线" : "离线"));
     }
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
@@ -88,7 +95,23 @@ MainWindow::MainWindow(QWidget *parent)
     updateTemperatureById("T004", t004Temperature_);
 
     statusBar()->showMessage("系统就绪");
+    setWindowTitle("工业设备监控 - Day 09");
+    appendLog("系统启动");
 }
+
+
+
+void MainWindow::appendLog(const QString& message)
+{
+    QString time = QDateTime::currentDateTime()
+    .toString("HH:mm:ss");
+
+    QString log = QString("[%1] %2")
+                      .arg(time, message);  //把 %1 替换为时间，把 %2 替换为日志内容。
+
+    ui->logEdit->appendPlainText(log);
+}
+
 
 
 void MainWindow::loadSampleFromJson()
@@ -212,6 +235,7 @@ void MainWindow::updateTemperatureById(
 
 void MainWindow::startCollection()
 {
+    appendLog("开始采集");
     setCollecting(true);
     // 每 1000 毫秒触发一次
     samplingTimer_->start(1000);
@@ -219,6 +243,7 @@ void MainWindow::startCollection()
 
 void MainWindow::stopCollection()
 {
+    appendLog("停止采集");
     // 停止定时更新
     samplingTimer_->stop();
     setCollecting(false);

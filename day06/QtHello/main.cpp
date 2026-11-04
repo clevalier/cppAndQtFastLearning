@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     //2.创建主窗口对象
     MainWindow w;
 
-    w.setWindowTitle("工业设备监控 - Day 06");//修改窗口标题
+    w.setWindowTitle("工业设备监控 - Day 09");//修改窗口标题
     w.resize(520, 320); //设置窗口初始宽高。
 
     //3.显示主窗口
