@@ -15,6 +15,8 @@ qt_add_executable(QtHello
     mainwindow.h
     DeviceReading.h
     mainwindow.ui
+    MockCollector.h
+    MockCollector.cpp
 
 )
 

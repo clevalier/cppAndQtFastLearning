@@ -3,7 +3,6 @@
 #include "DeviceReading.h"
 
 #include <QHeaderView>
-#include <QStatusBar>
 #include <QTableWidgetItem>
 #include <array>
 #include <QPushButton>
@@ -16,8 +15,8 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonParseError>
-#include <QDateTime>
 #include <QPlainTextEdit>
+#include "MockCollector.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -26,15 +25,24 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     ui->logEdit->setReadOnly(true);
     ui->logEdit->setMaximumBlockCount(300);
-
-    samplingTimer_ = new QTimer(this);
-
+    //创建采集器
+    collector_ = new MockCollector(this);
+    //再把信号连接到主窗口
     connect(
-        samplingTimer_,
-        &QTimer::timeout,
+        collector_,
+        &MockCollector::readingReady,
         this,
-        &MainWindow::onSamplingTimeout
+        &MainWindow::onReadingReady
         );
+
+    // samplingTimer_ = new QTimer(this);
+
+    // connect(
+    //     samplingTimer_,
+    //     &QTimer::timeout,
+    //     this,
+    //     &MainWindow::onSamplingTimeout
+    //     );
 
     // 初始化按钮状态
     // ui->startButton->setEnabled(true);
@@ -67,15 +75,21 @@ MainWindow::MainWindow(QWidget *parent)
         // }
         &MainWindow::stopCollection
     );
-
-    // 用结构体保存练习数据，再逐行填入 Designer 创建的表格。
-
+    //让最后一条直接使用采集器的当前数据
     const std::array<DeviceReading, 4> readings{{
         {"T001", 26.5, true,  0.60},
         {"T002", 31.2, true,  0.72},
         {"T003", 28.0, false, 0.00},
-        {"T004", 35.8, true,  0.85}
+        collector_->currentReading()
     }};
+    // 用结构体保存练习数据，再逐行填入 Designer 创建的表格。
+
+    // const std::array<DeviceReading, 4> readings{{
+    //     {"T001", 26.5, true,  0.60},
+    //     {"T002", 31.2, true,  0.72},
+    //     {"T003", 28.0, false, 0.00},
+    //     {"T004", 35.8, true,  0.85}
+    // }};
 
 
     auto *table = ui->tableWidget;
@@ -92,13 +106,56 @@ MainWindow::MainWindow(QWidget *parent)
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
     // updateTemperatureById("T004", 45.8);
-    updateTemperatureById("T004", t004Temperature_);
+    // updateTemperatureById("T004", t004Temperature_);
 
     statusBar()->showMessage("系统就绪");
     setWindowTitle("工业设备监控 - Day 09");
     appendLog("系统启动");
 }
 
+
+void MainWindow::onReadingReady(
+    const DeviceReading& reading)
+{
+    QString deviceId =
+        QString::fromStdString(reading.deviceId);
+
+    // 更新对应设备的温度
+    updateTemperatureById(
+        deviceId,
+        reading.temperature
+        );
+
+    // 状态栏显示最新温度
+    statusBar()->showMessage(
+        QString("%1 当前温度：%2 ℃")
+            .arg(deviceId)
+            .arg(reading.temperature, 0, 'f', 1)
+        );
+
+
+    const double alarmThreshold = 46.0;
+
+    if (reading.temperature > alarmThreshold)
+    {
+        if (!alarmActive_)
+        {
+            alarmActive_ = true;
+
+            appendLog(
+                QString("高温报警：%1 温度 %2 ℃")
+                    .arg(deviceId)
+                    .arg(reading.temperature, 0, 'f', 1)
+                );
+        }
+
+        statusBar()->showMessage(
+            QString("高温报警：%1 ℃")
+                .arg(reading.temperature, 0, 'f', 1)
+            );
+    }
+
+}
 
 
 void MainWindow::appendLog(const QString& message)
@@ -164,7 +221,9 @@ void MainWindow::saveSampleToJson()
     // 1. 构造 JSON 对象
     QJsonObject obj;
     obj["deviceId"] = "T004";
-    obj["temperature"] = t004Temperature_;
+   // obj["temperature"] = t004Temperature_;
+    obj["temperature"] =
+        collector_->currentReading().temperature;
     obj["timestamp"] =
         QDateTime::currentDateTime()
             .toString(Qt::ISODateWithMs);
@@ -238,14 +297,16 @@ void MainWindow::startCollection()
     appendLog("开始采集");
     setCollecting(true);
     // 每 1000 毫秒触发一次
-    samplingTimer_->start(1000);
+   // samplingTimer_->start(1000);
+    collector_->start();
 }
 
 void MainWindow::stopCollection()
 {
     appendLog("停止采集");
     // 停止定时更新
-    samplingTimer_->stop();
+    //samplingTimer_->stop();
+    collector_->stop();
     setCollecting(false);
 
     // 保存最后一次采样值
@@ -281,16 +342,16 @@ void MainWindow::onSamplingTimeout()
     t004Temperature_ += 0.1;
 
     // 只更新 T004 对应的温度单元格
-    updateTemperatureById(
-        "T004",
-        t004Temperature_
-        );
+    // updateTemperatureById(
+    //     "T004",
+    //     t004Temperature_
+    //     );
 
     // 在状态栏显示最新温度
-    statusBar()->showMessage(
-        QString("T004 当前温度：%1 ℃")
-            .arg(t004Temperature_, 0, 'f', 1)
-        );
+    // statusBar()->showMessage(
+    //     QString("T004 当前温度：%1 ℃")
+    //         .arg(t004Temperature_, 0, 'f', 1)
+    //     );
 }
 
 

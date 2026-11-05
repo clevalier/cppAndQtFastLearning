@@ -3,7 +3,9 @@
 
 #include <QMainWindow>
 #include <QString>
+#include "DeviceReading.h"
 
+class MockCollector;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
@@ -23,11 +25,13 @@ public:
 
 private slots:
     void startCollection();
-
     void stopCollection();
     void onSamplingTimeout();
+    void onReadingReady(const DeviceReading& reading);
 
 private:
+    MockCollector* collector_ = nullptr;
+    bool alarmActive_ = false;
     QTimer* samplingTimer_ = nullptr;
     double t004Temperature_ = 45.8;
     void appendLog(const QString& message);
