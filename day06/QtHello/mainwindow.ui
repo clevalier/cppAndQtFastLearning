@@ -32,6 +32,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="threadTestButton">
+        <property name="text">
+         <string>线程实验</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="startButton">
         <property name="text">
          <string>开始采集</string>

@@ -5,6 +5,7 @@ project(QtHello LANGUAGES CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
 
 qt_standard_project_setup()
 
@@ -17,13 +18,18 @@ qt_add_executable(QtHello
     mainwindow.ui
     MockCollector.h
     MockCollector.cpp
+    mock_tcp_server.py
+    mock_tcp_test.py
+    SlowWorker.h
+    SlowWorker.cpp
 
 )
 
 target_link_libraries(QtHello
     PRIVATE
-        Qt::Core
-        Qt::Widgets
+        Qt6::Core
+        Qt6::Widgets
+        Qt6::Network
 )
 
 # On macOS, prefer real framework headers over Qt's include_next forwarding

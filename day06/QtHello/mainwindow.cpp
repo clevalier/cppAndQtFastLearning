@@ -17,6 +17,10 @@
 #include <QJsonParseError>
 #include <QPlainTextEdit>
 #include "MockCollector.h"
+#include <QTcpSocket>
+#include <QAbstractSocket>
+#include "SlowWorker.h"
+#include <QThread>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -27,6 +31,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->logEdit->setMaximumBlockCount(300);
     //创建采集器
     collector_ = new MockCollector(this);
+
+    connect(
+        ui->threadTestButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::startSlowWorker
+        );
     //再把信号连接到主窗口
     connect(
         collector_,
@@ -111,7 +122,246 @@ MainWindow::MainWindow(QWidget *parent)
     statusBar()->showMessage("系统就绪");
     setWindowTitle("工业设备监控 - Day 09");
     appendLog("系统启动");
+
+
+    tcpSocket_ = new QTcpSocket(this);
+
+    // TCP 连接成功
+    connect(tcpSocket_, &QTcpSocket::connected,
+            this, [this]() {
+                appendLog("TCP 连接成功");
+            });
+
+    // TCP 收到数据
+    connect(tcpSocket_, &QTcpSocket::readyRead,
+            this, &MainWindow::onTcpReadyRead);
+
+    // TCP 连接断开
+    connect(tcpSocket_, &QTcpSocket::disconnected,
+            this, [this]() {
+                appendLog("TCP 连接已断开");
+                tcpBuffer_.clear();
+            });
+
+    // TCP 发生错误
+    connect(
+        tcpSocket_,
+        &QAbstractSocket::errorOccurred,
+        this,
+        [this](QAbstractSocket::SocketError error) {
+
+            if (error == QAbstractSocket::RemoteHostClosedError) {
+                return; // 由 disconnected 统一记录断开
+            }
+
+            appendLog("TCP 错误：" + tcpSocket_->errorString());
+        }
+        );
+
+    // 连接本地模拟服务器
+    tcpSocket_->connectToHost("127.0.0.1", 9000);
+
 }
+
+
+
+void MainWindow::startSlowWorker()
+{
+    // 防止重复启动
+    if (slowThread_ != nullptr)
+        return;
+
+    // 创建线程管理对象
+    auto* thread = new QThread(this);
+
+    // 创建工作对象，注意：不要指定父对象
+    auto* worker = new SlowWorker();
+
+    slowThread_ = thread;
+
+    // 将 Worker 移动到工作线程
+    worker->moveToThread(thread);
+
+    ui->threadTestButton->setEnabled(false);
+    appendLog("工作线程准备启动");
+
+    // 线程启动后执行耗时任务
+    connect(
+        thread,
+        &QThread::started,
+        worker,
+        &SlowWorker::doWork
+        );
+
+    // Worker 产生数据，主线程接收
+    connect(
+        worker,
+        &SlowWorker::readingReady,
+        this,
+        [this](double temperature) {
+            appendLog(
+                QString("线程采样：%1 ℃")
+                    .arg(temperature, 0, 'f', 1)
+                );
+        },
+        Qt::QueuedConnection
+        );
+
+    // Worker 完成后，要求线程退出
+    connect(
+        worker,
+        &SlowWorker::finished,
+        thread,
+        &QThread::quit
+        );
+
+    // 线程退出后清理 Worker
+    connect(
+        thread,
+        &QThread::finished,
+        worker,
+        &QObject::deleteLater
+        );
+
+    // 线程结束后恢复测试按钮
+    connect(
+        thread,
+        &QThread::finished,
+        this,
+        [this, thread]() {
+            appendLog("工作线程已结束");
+
+            ui->threadTestButton->setEnabled(true);
+            slowThread_ = nullptr;
+
+            thread->deleteLater();
+        }
+        );
+
+    // 真正启动新线程
+    thread->start();
+}
+
+void MainWindow::onTcpReadyRead()
+{
+    tcpBuffer_.append(tcpSocket_->readAll());
+
+    int pos;
+
+    while ((pos = tcpBuffer_.indexOf('\n')) != -1)
+    {
+        QByteArray line = tcpBuffer_.left(pos);
+
+        tcpBuffer_.remove(0, pos + 1);
+
+        if (line.endsWith('\r')) {
+            line.chop(1);
+        }
+
+        if (line.isEmpty()) {
+            continue;
+        }
+
+        appendLog(
+            "TCP 收到：" + QString::fromUtf8(line)
+            );
+
+
+        QJsonParseError parseError;
+
+        QJsonDocument doc =
+            QJsonDocument::fromJson(line, &parseError);
+
+        // 检查 JSON 语法是否正确
+        if (parseError.error != QJsonParseError::NoError ||
+            !doc.isObject())
+        {
+            appendLog("TCP JSON 解析失败：" +
+                      parseError.errorString());
+            continue;
+        }
+
+        QJsonObject obj = doc.object();
+
+        // 检查字段是否存在、类型是否正确
+        if (!obj.value("deviceId").isString() ||
+            !obj.value("temperature").isDouble() ||
+            !obj.value("pressureMPa").isDouble() ||
+            !obj.value("online").isBool())
+        {
+            appendLog("TCP 数据字段错误");
+            continue;
+        }
+
+        // 先提取设备 ID 和温度
+        // QString deviceId = obj.value("deviceId").toString();
+        // double temperature = obj.value("temperature").toDouble();
+        // 使用 Day 06 已经实现的函数更新温度
+        // updateTemperatureById(deviceId, temperature);
+
+        DeviceReading reading{
+            obj.value("deviceId").toString().toStdString(),
+            obj.value("temperature").toDouble(),
+            obj.value("online").toBool(),
+            obj.value("pressureMPa").toDouble()
+        };
+        updateDeviceReading(reading);
+
+
+
+    }
+
+    if (tcpBuffer_.size() > 64 * 1024)
+    {
+        appendLog("TCP 消息过长，断开连接");
+        tcpBuffer_.clear();
+        tcpSocket_->disconnectFromHost();
+    }
+}
+
+
+void MainWindow::updateDeviceReading(
+    const DeviceReading& reading)
+{
+    auto* table = ui->tableWidget;
+
+    QString deviceId =
+        QString::fromStdString(reading.deviceId);
+
+    for (int row = 0; row < table->rowCount(); ++row)
+    {
+        auto* idItem = table->item(row, 0);
+
+        if (!idItem || idItem->text() != deviceId)
+            continue;
+
+        // 更新温度
+        if (auto* item = table->item(row, 1))
+            item->setText(
+                QString::number(reading.temperature, 'f', 1)
+                );
+
+        // 更新压力
+        if (auto* item = table->item(row, 2))
+            item->setText(
+                reading.online
+                    ? QString::number(reading.pressureMPa, 'f', 2)
+                    : "—"
+                );
+
+        // 更新在线状态
+        if (auto* item = table->item(row, 3))
+            item->setText(
+                reading.online ? "在线" : "离线"
+                );
+
+        return;
+    }
+
+    appendLog("收到未知设备：" + deviceId);
+}
+
+
 
 
 void MainWindow::onReadingReady(
@@ -358,5 +608,13 @@ void MainWindow::onSamplingTimeout()
 
 MainWindow::~MainWindow()
 {
+    if (slowThread_ != nullptr)
+    {
+        slowThread_->requestInterruption();
+        slowThread_->quit();
+        slowThread_->wait();
+    }
+
+    delete ui;
     delete ui;
 }
