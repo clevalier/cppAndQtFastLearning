@@ -21,12 +21,73 @@
 #include <QAbstractSocket>
 #include "SlowWorker.h"
 #include <QThread>
+#include "AlarmManager.h"
+#include <QSettings>
+#include "AppConfig.h"
+#include "DeviceStore.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+
+    // QSettings settings(
+    //     QSettings::IniFormat,
+    //     QSettings::UserScope,
+    //     "HardwareStudy",
+    //     "QtHello"
+    //     );
+
+    // // 首次运行时创建默认配置
+    // if (!settings.contains("alarm/trigger"))
+    //     settings.setValue("alarm/trigger", 46.0);
+
+    // if (!settings.contains("alarm/recover"))
+    //     settings.setValue("alarm/recover", 45.0);
+
+    // if (!settings.contains("tcp/host"))
+    //     settings.setValue("tcp/host", "127.0.0.1");
+
+    // if (!settings.contains("tcp/port"))
+    //     settings.setValue("tcp/port", 9000);
+
+    // settings.sync();
+
+    // if (settings.status() != QSettings::NoError)
+    // {
+    //     qWarning() << "配置文件访问失败";
+    // }
+
+    // // 读取报警阈值
+    // double trigger =
+    //     settings.value("alarm/trigger", 46.0).toDouble();
+
+    // double recover =
+    //     settings.value("alarm/recover", 45.0).toDouble();
+
+    // // 避免配置错误导致报警逻辑异常
+    // if (recover >= trigger)
+    // {
+    //     qWarning() << "报警阈值配置不合法，使用默认值";
+    //     trigger = 46.0;
+    //     recover = 45.0;
+    // }
+    const AppConfig config = AppConfig::load();
+
+    alarmManager_ = AlarmManager(
+        config.alarmTrigger,
+        config.alarmRecover
+        );
+
+    // 将配置交给 AlarmManager
+    // alarmManager_ = AlarmManager(trigger, recover);
+
+    // qDebug() << "配置路径：" << settings.fileName();
+    // qDebug() << "报警触发阈值：" << trigger;
+    // qDebug() << "报警恢复阈值：" << recover;
+
     ui->logEdit->setReadOnly(true);
     ui->logEdit->setMaximumBlockCount(300);
     //创建采集器
@@ -109,6 +170,7 @@ MainWindow::MainWindow(QWidget *parent)
     table->setHorizontalHeaderLabels({"设备编号", "温度", "压力","状态"});
     for (int row = 0; row < table->rowCount(); ++row) {
         const auto &reading = readings[row];
+        deviceStore_.update(reading);
         table->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(reading.deviceId)));
         table->setItem(row, 1, new QTableWidgetItem(QString::number(reading.temperature, 'f', 1)));
         table->setItem(row, 2, new QTableWidgetItem(reading.online? QString::number(reading.pressureMPa, 'f', 2): "—"));
@@ -159,8 +221,144 @@ MainWindow::MainWindow(QWidget *parent)
         );
 
     // 连接本地模拟服务器
-    tcpSocket_->connectToHost("127.0.0.1", 9000);
+    //tcpSocket_->connectToHost("127.0.0.1", 9000);
+    // QString host =
+    //     settings.value("tcp/host", "127.0.0.1").toString();
 
+    // int port =
+    //     settings.value("tcp/port", 9000).toInt();
+
+    // if (host.isEmpty() || port < 1 || port > 65535)
+    // {
+    //     qWarning() << "TCP 配置非法，使用默认地址";
+    //     host = "127.0.0.1";
+    //     port = 9000;
+    // }
+
+    // tcpSocket_->connectToHost(
+    //     host,
+    //     static_cast<quint16>(port)
+    //     );
+    tcpSocket_->connectToHost(
+        config.tcpHost,
+        config.tcpPort
+        );
+    // AlarmManager testAlarm;
+
+    // const std::array<double, 6> testValues{
+    //     45.8, 46.1, 46.4, 45.5, 45.0, 46.2
+    // };
+
+    // for (double temperature : testValues)
+    // {
+    //     auto event =
+    //         testAlarm.evaluate("T004", temperature);
+
+    //     if (event == AlarmManager::Event::Triggered)
+    //     {
+    //         qDebug() << temperature << "高温报警触发";
+    //     }
+    //     else if (event == AlarmManager::Event::Recovered)
+    //     {
+    //         qDebug() << temperature << "报警恢复";
+    //     }
+    // }
+    // DeviceStore store;
+
+    // store.update({"T004", 46.6, true, 1.60});
+    // store.update({"T004", 47.2, true, 1.75});
+
+    // DeviceReading result{"", 0.0, false, 0.0};
+
+    // if (store.get("T004", result))
+    // {
+    //     qDebug() << "设备：" << result.deviceId.c_str();
+    //     qDebug() << "温度：" << result.temperature;
+    //     qDebug() << "压力：" << result.pressureMPa;
+    // }
+
+    // qDebug() << "设备数量：" << store.count();
+
+
+}
+
+
+
+void MainWindow::applyReading(
+    const DeviceReading& reading)
+{
+    // 1. 保存设备最新数据
+    deviceStore_.update(reading);
+
+    QString deviceId =
+        QString::fromStdString(reading.deviceId);
+
+    // 2. 从 DeviceStore 获取最新状态
+    DeviceReading latest{"", 0.0, false, 0.0};
+
+    if (!deviceStore_.get(deviceId, latest))
+    {
+        appendLog("设备数据读取失败：" + deviceId);
+        return;
+    }
+
+    // 3. 更新设备表格
+    updateDeviceReading(latest);
+
+    // 4. 更新普通状态信息
+    statusBar()->showMessage(
+        QString("%1 当前温度：%2 ℃")
+            .arg(deviceId)
+            .arg(latest.temperature, 0, 'f', 1)
+        );
+
+    // 5. 交给独立报警模块判断
+    handleAlarm(latest);
+
+    // 临时调试：验证模型中的数据
+    qDebug()
+        << "DeviceStore 更新："
+        << deviceId
+        << latest.temperature
+        << latest.pressureMPa
+        << latest.online;
+}
+
+
+void MainWindow::handleAlarm(const DeviceReading& reading)
+{
+    // 离线设备暂不进行温度报警判断
+    if (!reading.online)
+        return;
+
+    QString deviceId =
+        QString::fromStdString(reading.deviceId);
+
+    auto event = alarmManager_.evaluate(
+        deviceId,
+        reading.temperature
+        );
+
+    if (event == AlarmManager::Event::Triggered)
+    {
+        QString message =
+            QString("高温报警：%1 温度 %2 ℃")
+                .arg(deviceId)
+                .arg(reading.temperature, 0, 'f', 1);
+
+        appendLog(message);
+        statusBar()->showMessage(message);
+    }
+    else if (event == AlarmManager::Event::Recovered)
+    {
+        QString message =
+            QString("报警恢复：%1 温度 %2 ℃")
+                .arg(deviceId)
+                .arg(reading.temperature, 0, 'f', 1);
+
+        appendLog(message);
+        statusBar()->showMessage(message);
+    }
 }
 
 
@@ -305,9 +503,9 @@ void MainWindow::onTcpReadyRead()
             obj.value("online").toBool(),
             obj.value("pressureMPa").toDouble()
         };
-        updateDeviceReading(reading);
-
-
+        // updateDeviceReading(reading);
+        // handleAlarm(reading);
+        applyReading(reading);
 
     }
 
@@ -367,44 +565,31 @@ void MainWindow::updateDeviceReading(
 void MainWindow::onReadingReady(
     const DeviceReading& reading)
 {
-    QString deviceId =
-        QString::fromStdString(reading.deviceId);
+    // QString deviceId =
+    //     QString::fromStdString(reading.deviceId);
 
     // 更新对应设备的温度
-    updateTemperatureById(
-        deviceId,
-        reading.temperature
-        );
+    // updateTemperatureById(
+    //     deviceId,
+    //     reading.temperature
+    //     );
 
     // 状态栏显示最新温度
-    statusBar()->showMessage(
-        QString("%1 当前温度：%2 ℃")
-            .arg(deviceId)
-            .arg(reading.temperature, 0, 'f', 1)
-        );
+    // statusBar()->showMessage(
+    //     QString("%1 当前温度：%2 ℃")
+    //         .arg(deviceId)
+    //         .arg(reading.temperature, 0, 'f', 1)
+    //     );
 
 
-    const double alarmThreshold = 46.0;
+    // const double alarmThreshold = 46.0;
 
-    if (reading.temperature > alarmThreshold)
-    {
-        if (!alarmActive_)
-        {
-            alarmActive_ = true;
+    // if (reading.temperature > alarmThreshold)
+    // {
+    //    handleAlarm(reading);
+    // }
 
-            appendLog(
-                QString("高温报警：%1 温度 %2 ℃")
-                    .arg(deviceId)
-                    .arg(reading.temperature, 0, 'f', 1)
-                );
-        }
-
-        statusBar()->showMessage(
-            QString("高温报警：%1 ℃")
-                .arg(reading.temperature, 0, 'f', 1)
-            );
-    }
-
+     applyReading(reading);
 }
 
 

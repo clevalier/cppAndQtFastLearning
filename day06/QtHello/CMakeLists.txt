@@ -22,6 +22,13 @@ qt_add_executable(QtHello
     mock_tcp_test.py
     SlowWorker.h
     SlowWorker.cpp
+    AlarmManager.h
+    AlarmManager.cpp
+    alarm_tcp_test.py
+    AppConfig.h
+    AppConfig.cpp
+    DeviceStore.h
+    DeviceStore.cpp
 
 )
 

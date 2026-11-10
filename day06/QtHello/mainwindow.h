@@ -5,6 +5,8 @@
 #include <QString>
 #include "DeviceReading.h"
 #include <QByteArray>
+#include "AlarmManager.h"
+#include "DeviceStore.h"
 
 class MockCollector;
 
@@ -37,9 +39,13 @@ private slots:
 
 
 private:
+    DeviceStore deviceStore_;
+    void applyReading(const DeviceReading& reading);
+    AlarmManager alarmManager_;
+    void handleAlarm(const DeviceReading& reading);
     QThread* slowThread_ = nullptr;
     MockCollector* collector_ = nullptr;
-    bool alarmActive_ = false;
+    // bool alarmActive_ = false;
     QTimer* samplingTimer_ = nullptr;
     double t004Temperature_ = 45.8;
     void appendLog(const QString& message);
